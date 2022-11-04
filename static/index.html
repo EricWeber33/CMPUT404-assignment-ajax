@@ -32,29 +32,24 @@ var W = canvas.width  = window.innerWidth-6;
 var H = canvas.height = window.innerHeight-50;
 
 
-function sendJSONXMLHTTPRequest(url, objects, callback) {
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function () {
-        if (xhr.readyState==4) {
-            try {
-                if (xhr.status==200) {
-                    //XXX: parse some JSON from the request!
-                    //XXX: Pass the data to the callback!
+function sendJSONHTTPRequest(url, objects, callback) {
+    fetch(url,
+        {
+            method:'POST',
+            body:JSON.stringify(objects), 
+            headers:
+                {
+                'Content-type':'application/json',
+                 'Accept':'application/json'
                 }
-            } 
-            catch(e) {
-                alert('Error: ' + e.name);
-            }
         }
-    };
-    //XXX: POST to a URL
-    //XXX: set the mimetype and the accept headers!
-    // Remember to use application/json !
+    ).then(callback());
 }
 
 
 world = {};
-
+circ_radius = 1;
+circ_radius_up = true;
 //XXX: TODO Make this prettier!
 function drawCircle(context,entity) {
     with(context) {
@@ -75,7 +70,7 @@ function prepEntity(entity) {
         entity["colour"] = "#FF0000";
     }
     if (!entity["radius"]) {
-        entity["radius"] = 50;
+        entity["radius"] = 2;
     }
     return entity;
 }
@@ -136,9 +131,8 @@ function getPosition(e) {
 
 function addEntity(entity, data) {
     world[entity] = data;
-    drawNextFrame(); // (but should we?)
     //XXX: Send a XHTML Request that updates the entity you just  modified!
-
+    sendJSONHTTPRequest('/entity/'+entity, data, () => drawNextFrame());
 }
 
 var counter = 0;
@@ -247,26 +241,54 @@ mouse = (function() {
 // Add the application specific mouse listeners!
 //XXX: TODO Make these prettier!
 mouse.mousedowners.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'blue'});
+    circ_radius_up ? circ_radius++ : circ_radius--;
+        if (circ_radius > 19) {
+            circ_radius_up = false;
+        }
+        if (circ_radius == 0) {
+            circ_radius_up = true;
+        }
+    addEntityWithoutName({'x':x,'y':y,'colour':'white','radius':circ_radius});
 });
 
 mouse.mouseuppers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'red'});
+    circ_radius_up ? circ_radius++ : circ_radius--;
+        if (circ_radius > 19) {
+            circ_radius_up = false;
+        }
+        if (circ_radius == 0) {
+            circ_radius_up = true;
+        }
+    addEntityWithoutName({'x':x,'y':y,'colour':'white', 'radius':circ_radius});
 });
 
 mouse.mousedraggers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'green',
-                          'radius':10});
+    circ_radius_up ? circ_radius++ : circ_radius--;
+        if (circ_radius > 19) {
+            circ_radius_up = false;
+        }
+        if (circ_radius == 0) {
+            circ_radius_up = true;
+        }
+    addEntityWithoutName({'x':x,'y':y,'colour':'white', 'radius':circ_radius});
 });
 
 
 function update() {
     //XXX: TODO Get the world from the webservice using a XMLHTTPRequest
+    fetch('/world').then((response) => {
+        if (response.status === 200) {
+            return response.json();
+        }
+    }).then((json) => {
+        world = json;
+        drawNext = true;
+    });
     drawFrame();
 }
 
 // 30 frames per second
-setInterval( update, 1000/30.0);
+setInterval( update, 1000/18.0);
 
 
 
